@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import kotlin.random.Random
 
 private lateinit var buttonAnswer1: Button
 private lateinit var buttonAnswer2: Button
@@ -20,6 +21,15 @@ private var rigthAnswerButtonNumber = 0 //
 
 private const val TAG = "MainActivity"
 public var countOfAnswerOptions: Int = 0
+
+class InterfaceValues(val languages: List<String>, val thematics: List<String>, val score: List<String>, var interfaceIndex: Int) {
+    override fun toString(): String {
+        return """InterfaceIndex: $interfaceIndex
+                    Language: ${languages[interfaceIndex]}
+                    Thematics: ${thematics[interfaceIndex]}
+                    Score: ${score[interfaceIndex]}""".trimIndent()
+    }
+}
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,12 +54,21 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         countOfAnswerOptions = getString(R.string.CountOfAnswerOptions).toInt()
-        val questioner = Questioner(getString(R.string.VocabulariesLang1), getString(R.string.VocabulariesLang2))
+
+        val interfaceValues = InterfaceValues(getString(R.string.Languages).split(","), getString(R.string.Thematics).split(","), getString(R.string.Score).split(","), 1)
+
+
+        val questioner = Questioner(getString(R.string.VocabulariesLang1), getString(R.string.VocabulariesLang2), interfaceValues)
+
         Log.d(TAG, questioner.toString())
 
-        for (i in 1..4) questioner.giveQuestionAndAnswers()
-        //questioner.switchLanguages()
-        //questioner.giveQuestionAndAnswers()
+        for (i in 1..10) {
+            Log.d(TAG, "********Test No. $i. :***************")
+            Log.d(TAG, "${questioner.getQuestionAndAnswers()}")
+            questioner.handleUserAnswer(Random.nextInt(0, countOfAnswerOptions))
+        }
+
+
 
     }
 }

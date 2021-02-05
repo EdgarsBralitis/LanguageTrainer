@@ -3,60 +3,80 @@ package com.example.trainer
 import android.util.Log
 import kotlin.random.Random
 
-class QuestionAndAnswers(question: String, answer: List<String>, correctAnswerIndex: Int) {
-    val question = question
-    var answer: List<String> = answer
-    val correctAnswerIndex = correctAnswerIndex
+class QuestionAndAnswers(val question: String, val answerOptions: List<String>, val correctAnswerOptionIndex: Int, val themticsName: String, val interfaceValues: InterfaceValues) {
+
+    override fun toString(): String {
+        return """\n
+                  Interface: $interfaceValues
+                  Thematics: $themticsName
+                  Question: $question
+                  AnswerOptions: $answerOptions
+                  correctAnswerOptionIndex: $correctAnswerOptionIndex"""
+    }
 }
 
 private const val TAG = "Questioner"
 
-class Questioner(inputStringLang1: String, inputStringLang2: String) {
+class Questioner(inputStringLang0: String, inputStringLang1: String, interfaceValues: InterfaceValues) {
 
-    class Vocabulary(thematicsLang1: String, thematicsLang2: String, listOfWords1: List<String>, listOfWords2: List<String>) {
-        class WordPair(wordLang1: String, wordLang2: String) {
+    class Vocabulary(thematicsLang0: String, thematicsLang1: String, listOfWords0: List<String>, listOfWords1: List<String>) {
+
+        class WordPair(wordLang0: String, wordLang1: String) {
             operator fun get(index: Int): String {
                 return word[index]
             }
 
-            var word: MutableList<String> = mutableListOf()
+            private val word: MutableList<String> = mutableListOf()
             var value = 0 //shows the need to remember this word pair. correct answer with first try decreases value by 1. wrong answer increases value by 1
 
             init {
+                word.add(wordLang0)
                 word.add(wordLang1)
-                word.add(wordLang2)
             }
             //word[0] is translation of word[1] and vice versa
         }
 
-        val thematicsLang1: String = thematicsLang1 //thematics in first language
-        val thematicsLang2: String = thematicsLang2 //thematics in second language
         var listOfWordPairs: MutableList<WordPair> = mutableListOf()//question and correct answer pairs which belong to thematics
 
         init {
-            if (listOfWords1.lastIndex != listOfWords2.lastIndex)
-                throw Exception("Vocabulary Init (Count of phrases: in $thematicsLang1 ${listOfWords1.count()}, in $thematicsLang2 ${listOfWords2.count()})")
+            if (listOfWords0.lastIndex != listOfWords1.lastIndex)
+                throw Exception("Vocabulary Init (Count of phrases: in $thematicsLang0 ${listOfWords0.count()}, in $thematicsLang1 ${listOfWords1.count()})")
 
-            if (listOfWords1.distinct().count() < countOfAnswerOptions)
+            if (listOfWords0.distinct().count() < countOfAnswerOptions)
                 throw Exception("Vocabulary Init listOfWords1.distinct().count() < $countOfAnswerOptions")
 
-            if (listOfWords2.distinct().count() < countOfAnswerOptions)
+            if (listOfWords1.distinct().count() < countOfAnswerOptions)
                 throw Exception("Vocabulary Init listOfWords2.distinct().count() < $countOfAnswerOptions")
 
-            for (i in 0..listOfWords1.lastIndex) {
-                listOfWordPairs.add(WordPair(listOfWords1[i], listOfWords2[i]))
+            for (i in 0..listOfWords0.lastIndex) {
+                listOfWordPairs.add(WordPair(listOfWords0[i], listOfWords1[i]))
             }
         }
+
+
+
+        val thematics: MutableList<String> = mutableListOf()//thematics name in first language and second language
+
+        init {
+            thematics.add(thematicsLang0)
+            thematics.add(thematicsLang1)
+        }
+
+
     }
 
+    private val interfaceValues = interfaceValues
+
+    private val inputStringListLang0: List<String> = inputStringLang0.split(",")//data to recreate vocabulary from is stored here
     private val inputStringListLang1: List<String> = inputStringLang1.split(",")//data to recreate vocabulary from is stored here
-    private val inputStringListLang2: List<String> = inputStringLang2.split(",")//data to recreate vocabulary from is stored here
     private var vocabularies: MutableList<Vocabulary> = mutableListOf()
 
     private var currentVocabularyIndex = 0
     private var currentQuestionIndex = 0
 
-    private var indexPrimaryLang = Random.nextInt(0, 2)
+    private var currentCorrectAnswerOption = -1
+
+    private var indexPrimaryLang = interfaceValues.interfaceIndex
     private var indexSecondaryLang = (indexPrimaryLang + 1) % 2
 
     override fun toString(): String {
@@ -64,15 +84,15 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
         result += "${vocabularies.count()} vocabularies:\n"
 
         for (i in 0..vocabularies.lastIndex) {
-            result += " *** ${vocabularies[i].thematicsLang1} / ${vocabularies[i].thematicsLang2} (${vocabularies[i].listOfWordPairs.count()})"
+            result += " *** ${vocabularies[i].thematics[indexPrimaryLang]} / ${vocabularies[i].thematics[indexSecondaryLang]} (${vocabularies[i].listOfWordPairs.count()})"
         }
 
         return result
     }
 
     init {
-        if (inputStringListLang1.count() != inputStringListLang2.count()) {
-            throw Exception("inputStringListLang1.count() = ${inputStringListLang1.count()} and inputStringListLang2.count() = ${inputStringListLang2.count()}")
+        if (inputStringListLang0.count() != inputStringListLang1.count()) {
+            throw Exception("inputStringListLang0.count() = ${inputStringListLang0.count()} and inputStringListLang1.count() = ${inputStringListLang1.count()}")
         }
         initializeVocabularies()
     }
@@ -80,39 +100,39 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
     private fun initializeVocabularies() {
         var openingTagPosition = 0
         var closingTagPosition: Int
+        var thematicsNameLang0 = ""
         var thematicsNameLang1 = ""
-        var thematicsNameLang2 = ""
         var openingTagOccurred = false
 
-        for (i in 0..inputStringListLang1.lastIndex) {
-            if ((inputStringListLang1[i][0] == '/' && inputStringListLang2[i][0] != '/') || (inputStringListLang1[i][0] != '/' && inputStringListLang2[i][0] == '/')) {
-                throw Exception("initializeVocabularies(): inputStringLang1[$i][0] = ${inputStringListLang1[i][0]} and inputStringLang2[$i][0] = ${inputStringListLang2[i][0]}");
+        for (i in 0..inputStringListLang0.lastIndex) {
+            if ((inputStringListLang0[i][0] == '/' && inputStringListLang1[i][0] != '/') || (inputStringListLang0[i][0] != '/' && inputStringListLang1[i][0] == '/')) {
+                throw Exception("initializeVocabularies(): inputStringLang1[$i][0] = ${inputStringListLang0[i][0]} and inputStringLang2[$i][0] = ${inputStringListLang1[i][0]}");
             }
-            if (inputStringListLang1[i][0] == '/') {
+            if (inputStringListLang0[i][0] == '/') {
                 if (!openingTagOccurred) {
+                    thematicsNameLang0 = inputStringListLang0[i].drop(1)
                     thematicsNameLang1 = inputStringListLang1[i].drop(1)
-                    thematicsNameLang2 = inputStringListLang2[i].drop(1)
                     openingTagPosition = i
                     openingTagOccurred = true
                 } else {
                     closingTagPosition = i
                     openingTagOccurred = false
                     val vocabulary = Vocabulary(
+                            thematicsLang0 = thematicsNameLang0,
                             thematicsLang1 = thematicsNameLang1,
-                            thematicsLang2 = thematicsNameLang2,
-                            listOfWords1 = inputStringListLang1.subList(
+                            listOfWords0 = inputStringListLang0.subList(
                                     openingTagPosition + 1,
                                     closingTagPosition
                             ),
-                            listOfWords2 = inputStringListLang2.subList(
+                            listOfWords1 = inputStringListLang1.subList(
                                     openingTagPosition + 1,
                                     closingTagPosition
                             )
                     )
+                    if (inputStringListLang0[openingTagPosition] != inputStringListLang0[closingTagPosition])
+                        throw Exception("initializeVocabularies(): ${inputStringListLang0[openingTagPosition]} != ${inputStringListLang0[closingTagPosition]}")
                     if (inputStringListLang1[openingTagPosition] != inputStringListLang1[closingTagPosition])
                         throw Exception("initializeVocabularies(): ${inputStringListLang1[openingTagPosition]} != ${inputStringListLang1[closingTagPosition]}")
-                    if (inputStringListLang2[openingTagPosition] != inputStringListLang2[closingTagPosition])
-                        throw Exception("initializeVocabularies(): ${inputStringListLang2[openingTagPosition]} != ${inputStringListLang2[closingTagPosition]}")
 
                     vocabularies.add(vocabulary)
                 }
@@ -130,6 +150,7 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
     }
 
     private fun shuffleCorrectAnswer(countOfAnswerOptions: Int, correctAnswerIndex: Int): List<String> {
+        //returns List<String> of answer options. One option is right answer, the rest are wrong answers. Correct answer is randomly placed in list.
         var correctAnswerOptionNumber = Random.nextInt(0, countOfAnswerOptions)
 
         var indexOfSelectedAnswers: MutableList<Int> = mutableListOf()
@@ -156,7 +177,7 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
         return selectedAnswers
     }
 
-    fun giveQuestionAndAnswers(): QuestionAndAnswers {
+    fun getQuestionAndAnswers(): QuestionAndAnswers {
         currentQuestionIndex = Random.nextInt(0, vocabularies[currentVocabularyIndex].listOfWordPairs.count())
 
         var question = vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex][indexPrimaryLang]
@@ -164,13 +185,16 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
 
         var answerOptions = shuffleCorrectAnswer(countOfAnswerOptions, currentQuestionIndex)
 
-        Log.d(TAG, "giveQuestionAndAnswers(): currentQuestionIndex= $currentQuestionIndex *** $question *** correctAnswer= $correctAnswer (${answerOptions.indexOf(correctAnswer)}) *** answerOptions: $answerOptions")
-        return QuestionAndAnswers(question, answerOptions, answerOptions.indexOf(correctAnswer))
+        //Log.d(TAG, "giveQuestionAndAnswers(): currentQuestionIndex= $currentQuestionIndex *** $question *** correctAnswer= $correctAnswer (${answerOptions.indexOf(correctAnswer)}) *** answerOptions: $answerOptions")
+
+        currentCorrectAnswerOption = answerOptions.indexOf(correctAnswer)
+
+        return QuestionAndAnswers(question, answerOptions, currentCorrectAnswerOption, vocabularies[currentVocabularyIndex].thematics[indexPrimaryLang], interfaceValues)
     }
 
-    fun handleUserAnswer(answer: Int) {
-        //if answerCorrect wordpair value-=1 else wordpair value+=1
-        //if wordpair value == -1 forgetQuestion
+    fun handleUserAnswer(answerOptionIndex: Int) {
+        if (answerOptionIndex == currentCorrectAnswerOption) Log.d(TAG, "handleUserAnswer($answerOptionIndex): Answer $answerOptionIndex is correct!")
+        else Log.d(TAG, "handleUserAnswer($answerOptionIndex): Answer $answerOptionIndex is wrong!")
     }
 
     fun forgetQuestion(questionAndAnswers: QuestionAndAnswers) {
@@ -185,7 +209,16 @@ class Questioner(inputStringLang1: String, inputStringLang2: String) {
     fun switchLanguages() {
         indexPrimaryLang = (indexPrimaryLang + 1) % 2
         indexSecondaryLang = (indexSecondaryLang + 1) % 2
-        Log.d(TAG, "switchLagnuages(): indexPrimaryLang=$indexPrimaryLang and indexSecondarylang=$indexSecondaryLang")
+        interfaceValues.interfaceIndex = (interfaceValues.interfaceIndex + 1) % 2
+        Log.d(TAG, "switchLagnuages(): indexPrimaryLang=$indexPrimaryLang and indexSecondarylang=$indexSecondaryLang; interfaceIndex=${interfaceValues.interfaceIndex}")
+    }
+
+    fun nextVocabulary() {
+
+    }
+
+    fun previousVocabulary() {
+
     }
 
     fun restoreAllQuestions() {
