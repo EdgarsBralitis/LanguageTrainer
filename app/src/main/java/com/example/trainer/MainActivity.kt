@@ -62,11 +62,15 @@ class MainActivity : AppCompatActivity() {
 
         Log.d(TAG, questioner.toString())
 
-        for (i in 1..10) {
-            Log.d(TAG, "********Test No. $i. :***************")
-            Log.d(TAG, "${questioner.getQuestionAndAnswers()}")
-            questioner.handleUserAnswer(Random.nextInt(0, countOfAnswerOptions))
-        }
+//        for (i in 1..40) {
+//            Log.d(TAG, "********Test No. $i. :***************")
+//
+//            var questionAndAnswers = questioner.getQuestionAndAnswers()
+//            Log.d(TAG, "$questionAndAnswers")
+//            questioner.handleUserAnswer(if (i%7 == 0) 0 else questionAndAnswers.correctAnswerOptionIndex)
+//            questioner.switchLanguages()
+//            questioner.nextVocabulary()
+//        }
 
 
 

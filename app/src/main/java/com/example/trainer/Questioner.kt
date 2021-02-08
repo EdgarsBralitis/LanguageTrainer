@@ -3,11 +3,12 @@ package com.example.trainer
 import android.util.Log
 import kotlin.random.Random
 
-class QuestionAndAnswers(val question: String, val answerOptions: List<String>, val correctAnswerOptionIndex: Int, val themticsName: String, val interfaceValues: InterfaceValues) {
+class QuestionAndAnswers(val question: String, val answerOptions: List<String>, val correctAnswerOptionIndex: Int, val themticsName: String, val percentageOfSuccesses: Int, val interfaceValues: InterfaceValues) {
 
     override fun toString(): String {
         return """\n
                   Interface: $interfaceValues
+                  PercentageOfSuccesses: $percentageOfSuccesses
                   Thematics: $themticsName
                   Question: $question
                   AnswerOptions: $answerOptions
@@ -55,7 +56,7 @@ class Questioner(inputStringLang0: String, inputStringLang1: String, interfaceVa
 
 
 
-        val thematics: MutableList<String> = mutableListOf()//thematics name in first language and second language
+       val thematics: MutableList<String> = mutableListOf()//thematics name in first language and second language
 
         init {
             thematics.add(thematicsLang0)
@@ -75,6 +76,10 @@ class Questioner(inputStringLang0: String, inputStringLang1: String, interfaceVa
     private var currentQuestionIndex = 0
 
     private var currentCorrectAnswerOption = -1
+    private var countOfCurrentQuestionAnsweringTries = 0
+
+    private var countOfQuestionsAnswered = 0
+    private var countOfSuccessfulFirstTryAnswers = 0
 
     private var indexPrimaryLang = interfaceValues.interfaceIndex
     private var indexSecondaryLang = (indexPrimaryLang + 1) % 2
@@ -104,6 +109,7 @@ class Questioner(inputStringLang0: String, inputStringLang1: String, interfaceVa
         var thematicsNameLang1 = ""
         var openingTagOccurred = false
 
+        Log.d(TAG, "initializeVocabularies()")
         for (i in 0..inputStringListLang0.lastIndex) {
             if ((inputStringListLang0[i][0] == '/' && inputStringListLang1[i][0] != '/') || (inputStringListLang0[i][0] != '/' && inputStringListLang1[i][0] == '/')) {
                 throw Exception("initializeVocabularies(): inputStringLang1[$i][0] = ${inputStringListLang0[i][0]} and inputStringLang2[$i][0] = ${inputStringListLang1[i][0]}");
@@ -178,50 +184,103 @@ class Questioner(inputStringLang0: String, inputStringLang1: String, interfaceVa
     }
 
     fun getQuestionAndAnswers(): QuestionAndAnswers {
+        Log.d(TAG, "getQuestionAndAnswers()")
         currentQuestionIndex = Random.nextInt(0, vocabularies[currentVocabularyIndex].listOfWordPairs.count())
 
-        var question = vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex][indexPrimaryLang]
-        var correctAnswer = vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex][indexSecondaryLang]
+        val question = vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex][indexPrimaryLang]
+        val correctAnswer = vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex][indexSecondaryLang]
 
-        var answerOptions = shuffleCorrectAnswer(countOfAnswerOptions, currentQuestionIndex)
+        val answerOptions = shuffleCorrectAnswer(countOfAnswerOptions, currentQuestionIndex)
 
-        //Log.d(TAG, "giveQuestionAndAnswers(): currentQuestionIndex= $currentQuestionIndex *** $question *** correctAnswer= $correctAnswer (${answerOptions.indexOf(correctAnswer)}) *** answerOptions: $answerOptions")
+        //Log.d(TAG, "getQuestionAndAnswers(): currentQuestionIndex= $currentQuestionIndex *** $question *** correctAnswer= $correctAnswer (${answerOptions.indexOf(correctAnswer)}) *** answerOptions: $answerOptions")
 
         currentCorrectAnswerOption = answerOptions.indexOf(correctAnswer)
 
-        return QuestionAndAnswers(question, answerOptions, currentCorrectAnswerOption, vocabularies[currentVocabularyIndex].thematics[indexPrimaryLang], interfaceValues)
+        countOfCurrentQuestionAnsweringTries = 0
+
+        val percentageOfSuccesses = if (countOfQuestionsAnswered == 0) 0 else (countOfSuccessfulFirstTryAnswers.toFloat()/countOfQuestionsAnswered.toFloat() * 100).toInt()
+
+        //Log.d(TAG, "getQuestionAndAnswers(): $countOfSuccessfulFirstTryAnswers/$countOfQuestionsAsked * 100 = ${(countOfSuccessfulFirstTryAnswers.toFloat()/countOfQuestionsAsked.toFloat() * 100).toInt()}")
+
+        return QuestionAndAnswers(question, answerOptions, currentCorrectAnswerOption, vocabularies[currentVocabularyIndex].thematics[indexPrimaryLang], percentageOfSuccesses, interfaceValues)
+    }
+
+    private fun currentVocabularyIsOK(): Boolean {
+        //returns true when both languages in current vocabulary have at least counOfAnswerOptions different phrases
+        Log.d(TAG, "currentVocabularyIsOK()")
+        val temp0: MutableList<String> = mutableListOf()
+        val temp1: MutableList<String> = mutableListOf()
+        for (i in 0 until vocabularies[currentVocabularyIndex].listOfWordPairs.count()) {
+            temp0.add(vocabularies[currentVocabularyIndex].listOfWordPairs[i][0])
+            temp1.add(vocabularies[currentVocabularyIndex].listOfWordPairs[i][0])
+            if (temp0.distinct().count() >= countOfAnswerOptions && temp1.distinct().count() >= countOfAnswerOptions) return true
+        }
+        return false
     }
 
     fun handleUserAnswer(answerOptionIndex: Int) {
-        if (answerOptionIndex == currentCorrectAnswerOption) Log.d(TAG, "handleUserAnswer($answerOptionIndex): Answer $answerOptionIndex is correct!")
-        else Log.d(TAG, "handleUserAnswer($answerOptionIndex): Answer $answerOptionIndex is wrong!")
+        Log.d(TAG, "handleUserAnswer($answerOptionIndex):")
+
+        if (countOfCurrentQuestionAnsweringTries == 0) countOfQuestionsAnswered += 1
+
+        countOfCurrentQuestionAnsweringTries += 1
+        if (answerOptionIndex == currentCorrectAnswerOption) {
+            Log.d(TAG, "Answer $answerOptionIndex is correct!")
+            if (countOfCurrentQuestionAnsweringTries == 1) {
+                vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex].value -= 1
+                countOfSuccessfulFirstTryAnswers += 1
+            }
+        } else {
+            Log.d(TAG, "Answer $answerOptionIndex is wrong!")
+            if (countOfCurrentQuestionAnsweringTries == 1) vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex].value += 1
+        }
+
+
+        if (vocabularies[currentVocabularyIndex].listOfWordPairs[currentQuestionIndex].value < 0) {
+            forgetCurrentQuestionAnswerPair()
+        }
+
     }
 
-    fun forgetQuestion(questionAndAnswers: QuestionAndAnswers) {
-        //delete wordpair
-        //if unique words in lang1 or lang2 less than countOfAnswerOptions then forgetcurrentVocabulary
+    private fun forgetCurrentQuestionAnswerPair() {
+        Log.d(TAG, "forgetCurrentQuestionAnswerPair()")
+        vocabularies[currentVocabularyIndex].listOfWordPairs.removeAt(currentQuestionIndex)
+        //if (vocabularies[currentVocabularyIndex].listOfWordPairs.lastIndex < currentQuestionIndex)
+
+        if (!currentVocabularyIsOK()) {
+            forgetCurrentVocabulary()
+        }
     }
 
-    fun forgetVocabulary() {
-
+    private fun forgetCurrentVocabulary() {
+        Log.d(TAG, "forgetCurrentVocabulary()")
+        vocabularies.removeAt(currentVocabularyIndex)
+        if (vocabularies.count() == 0) restoreAllVocabularies()
+        if (currentVocabularyIndex > vocabularies.lastIndex) currentVocabularyIndex = vocabularies.lastIndex
     }
 
     fun switchLanguages() {
         indexPrimaryLang = (indexPrimaryLang + 1) % 2
         indexSecondaryLang = (indexSecondaryLang + 1) % 2
         interfaceValues.interfaceIndex = (interfaceValues.interfaceIndex + 1) % 2
-        Log.d(TAG, "switchLagnuages(): indexPrimaryLang=$indexPrimaryLang and indexSecondarylang=$indexSecondaryLang; interfaceIndex=${interfaceValues.interfaceIndex}")
+        Log.d(TAG, "switchLagnuages(): indexPrimaryLang=$indexPrimaryLang and indexSecondaryLang=$indexSecondaryLang; interfaceIndex=${interfaceValues.interfaceIndex}")
     }
 
     fun nextVocabulary() {
-
+        Log.d(TAG, "nextVocabulary(): currentVocabularyIndex was $currentVocabularyIndex")
+        currentVocabularyIndex = (currentVocabularyIndex + 1) % vocabularies.count()
+        Log.d(TAG, "nextVocabulary(): currentVocabularyIndex is $currentVocabularyIndex")
     }
 
     fun previousVocabulary() {
-
+        Log.d(TAG, "previousVocabulary(): currentVocabularyIndex was $currentVocabularyIndex")
+        currentVocabularyIndex -= 1
+        if (currentVocabularyIndex < 0) currentVocabularyIndex = vocabularies.lastIndex
+        Log.d(TAG, "previousVocabulary(): currentVocabularyIndex is $currentVocabularyIndex")
     }
 
-    fun restoreAllQuestions() {
+    private fun restoreAllVocabularies() {
+        Log.d(TAG, "restoreAllVocabularies()")
         vocabularies = mutableListOf()
         initializeVocabularies()
     }
