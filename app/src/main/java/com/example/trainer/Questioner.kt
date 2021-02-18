@@ -3,6 +3,16 @@ package com.example.trainer
 import android.util.Log
 import kotlin.random.Random
 
+class InterfaceValues(val languages: List<String>, val thematics: List<String>, val score: List<String>, var interfaceIndex: Int) {
+    override fun toString(): String {
+        return """InterfaceIndex: $interfaceIndex
+                    Language: ${languages[interfaceIndex]}
+                    Thematics: ${thematics[interfaceIndex]}
+                    Score: ${score[interfaceIndex]}""".trimIndent()
+    }
+}
+
+
 class QuestionAndAnswers(val question: String, val answerOptions: List<String>, val correctAnswerOptionIndex: Int, val themticsName: String, val percentageOfSuccesses: Int, val interfaceValues: InterfaceValues) {
 
     override fun toString(): String {

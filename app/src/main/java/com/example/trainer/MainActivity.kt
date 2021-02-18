@@ -2,42 +2,45 @@ package com.example.trainer
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.widget.Button
 import android.widget.TextView
-import kotlin.random.Random
+//import kotlinx.coroutines.flow.flow
 
 private lateinit var buttonAnswer1: Button
 private lateinit var buttonAnswer2: Button
 private lateinit var buttonAnswer3: Button
 private lateinit var buttonAnswer4: Button
 
-private var button1Text = "1. opcija"
-private var button2Text = "2. opcija"
-private var button3Text = "3. opcija"
-private var button4Text = "4. opcija"
+//onscreen values (start of declaration)
+private var textViewScoreText = "%"
+private var textViewQuestionText = "?"
+
+private var button1Text = "1"
+private var button2Text = "2"
+private var button3Text = "3"
+private var button4Text = "4"
+
+private var textViewLang1Text = ""
+private var buttonSwitchLanguagesText = "<->"
+private var textViewlang2 = ""
+
+private var buttonPreviousThematicsText = "<"
+private var textViewThematicsText = ""
+private var buttonNextThematicsText = ">"
+//onscreen values (end of declaration)
 
 private var rigthAnswerButtonNumber = 0 //
 
 private const val TAG = "MainActivity"
-public var countOfAnswerOptions: Int = 0
-
-class InterfaceValues(val languages: List<String>, val thematics: List<String>, val score: List<String>, var interfaceIndex: Int) {
-    override fun toString(): String {
-        return """InterfaceIndex: $interfaceIndex
-                    Language: ${languages[interfaceIndex]}
-                    Thematics: ${thematics[interfaceIndex]}
-                    Score: ${score[interfaceIndex]}""".trimIndent()
-    }
-}
+var countOfAnswerOptions: Int = 0
 
 class MainActivity : AppCompatActivity() {
 
-    private val buttonNative by lazy(LazyThreadSafetyMode.NONE) { findViewById<Button>(R.id.buttonNative) }
-    private val buttonForeign by lazy(LazyThreadSafetyMode.NONE) { findViewById<Button>(R.id.buttonForeign) }
+    private val textViewLang1 by lazy(LazyThreadSafetyMode.NONE) { findViewById<Button>(R.id.textViewLang1) }
+    private val textViewLang2 by lazy(LazyThreadSafetyMode.NONE) { findViewById<Button>(R.id.textViewLang2) }
     private val buttonSwitchNativeForeign by lazy(LazyThreadSafetyMode.NONE) {
         findViewById<Button>(
-                R.id.buttonSwitchNativeForeign
+                R.id.buttonSwitchLanguages
         )
     }
 
@@ -58,11 +61,21 @@ class MainActivity : AppCompatActivity() {
         val interfaceValues = InterfaceValues(getString(R.string.Languages).split(","), getString(R.string.Thematics).split(","), getString(R.string.Score).split(","), 1)
 
 
-        val questioner = Questioner(getString(R.string.VocabulariesLang1), getString(R.string.VocabulariesLang2), interfaceValues)
 
-        Log.d(TAG, questioner.toString())
 
-//        for (i in 1..40) {
+//        val flowTest = flow<QuestionAndAnswers> {
+//            val questioner = Questioner(getString(R.string.VocabulariesLang1), getString(R.string.VocabulariesLang2), interfaceValues)
+//
+//            for (i in 1 .. 10) {
+//                emit(questioner.getQuestionAndAnswers())
+//            }
+//        }
+//
+//        launch {}
+
+//        Log.d(TAG, questioner.toString())
+
+//        for (i in 1..200) {
 //            Log.d(TAG, "********Test No. $i. :***************")
 //
 //            var questionAndAnswers = questioner.getQuestionAndAnswers()
